@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Appbar, Card, Text } from "react-native-paper";
-import { supabase } from "../supabase";
+import { supabase } from "../../supabase";
 
 export default function TodosAhorros() {
   const [ahorros, setAhorros] = useState([]);

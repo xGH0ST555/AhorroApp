@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { Alert, FlatList, StyleSheet, View } from "react-native";
 import { Appbar, Button, Card, Text, TextInput } from "react-native-paper";
-//import { supabase } from "../supabase";
+import { supabase } from "../../supabase";
 
 export default function MisAhorros() {
   const [usuario, setUsuario] = useState("");
   const [monto, setMonto] = useState("");
   const [ahorros, setAhorros] = useState([]);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (usuario.trim() !== "") {
@@ -18,19 +19,45 @@ export default function MisAhorros() {
     const { data, error } = await supabase
       .from("users")
       .select("*")
-      .eq("usuario", usuario)
+      .eq("usuario", usuario.trim())
       .order("created_at", { ascending: false });
-    if (!error) setAhorros(data);
+    if (error) {
+      Alert.alert("Error al consultar", error.message);
+      return;
+    }
+    setAhorros(data ?? []);
   };
 
   const addAhorro = async () => {
-    if (!usuario.trim() || !monto.trim()) return;
-    const { error } = await supabase
+    const montoNumerico = Number.parseFloat(monto.replace(",", "."));
+
+    if (!usuario.trim() || !monto.trim()) {
+      Alert.alert("Datos incompletos", "Escribe un usuario y un monto.");
+      return;
+    }
+
+    if (!Number.isFinite(montoNumerico) || montoNumerico <= 0) {
+      Alert.alert("Monto inválido", "Escribe un monto mayor que cero.");
+      return;
+    }
+
+    setGuardando(true);
+    const { data, error } = await supabase
       .from("users")
-      .insert([{ usuario, monto: parseFloat(monto) }]);
-    if (!error) {
+      .insert([{ usuario: usuario.trim(), monto: montoNumerico }])
+      .select()
+      .single();
+    setGuardando(false);
+
+    if (error) {
+      Alert.alert("No se pudo guardar", error.message);
+      return;
+    }
+
+    if (data) {
       setMonto("");
       fetchAhorros();
+      Alert.alert("Guardado", "El ahorro se guardó correctamente.");
     }
   };
 
@@ -55,7 +82,13 @@ export default function MisAhorros() {
         keyboardType="numeric"
         style={styles.input}
       />
-      <Button mode="contained" onPress={addAhorro} style={styles.button}>
+      <Button
+        mode="contained"
+        onPress={addAhorro}
+        loading={guardando}
+        disabled={guardando}
+        style={styles.button}
+      >
         Guardar
       </Button>
 
